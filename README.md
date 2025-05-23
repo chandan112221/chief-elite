@@ -94,3 +94,4 @@ python add_sample_stock.py
 ## License
 
 Private project for Chief Elite BD
+https://chandan112221.github.io/chief-elite/
