@@ -1,0 +1,418 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ title }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Other Orders</li>
+    </ol>
+    
+    <!-- Status Filter Tabs -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-filter me-1"></i>
+            Filter Orders
+        </div>
+        <div class="card-body">
+            <ul class="nav nav-tabs">
+                <li class="nav-item">
+                    <a class="nav-link {% if status_filter == 'all' %}active{% endif %}" href="{{ url_for('admin_other_orders', status='all') }}">
+                        All <span class="badge bg-secondary rounded-pill ms-1">{{ total_orders }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if status_filter == 'pending' %}active{% endif %}" href="{{ url_for('admin_other_orders', status='pending') }}">
+                        Pending <span class="badge bg-warning rounded-pill ms-1">{{ status_counts.get('pending', 0) }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if status_filter == 'approved' %}active{% endif %}" href="{{ url_for('admin_other_orders', status='approved') }}">
+                        Approved <span class="badge bg-info rounded-pill ms-1">{{ status_counts.get('approved', 0) }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if status_filter == 'processing' %}active{% endif %}" href="{{ url_for('admin_other_orders', status='processing') }}">
+                        Processing <span class="badge bg-primary rounded-pill ms-1">{{ status_counts.get('processing', 0) }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if status_filter == 'completed' %}active{% endif %}" href="{{ url_for('admin_other_orders', status='completed') }}">
+                        Completed <span class="badge bg-success rounded-pill ms-1">{{ status_counts.get('completed', 0) }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if status_filter == 'rejected' %}active{% endif %}" href="{{ url_for('admin_other_orders', status='rejected') }}">
+                        Rejected <span class="badge bg-danger rounded-pill ms-1">{{ status_counts.get('rejected', 0) }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if status_filter == 'cancelled' %}active{% endif %}" href="{{ url_for('admin_other_orders', status='cancelled') }}">
+                        Cancelled <span class="badge bg-secondary rounded-pill ms-1">{{ status_counts.get('cancelled', 0) }}</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Orders Table with Bulk Actions -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-list me-1"></i>
+                Orders
+            </div>
+            <div class="bulk-actions">
+                <form id="bulkActionForm" class="d-flex align-items-center">
+                    <select id="bulkAction" class="form-select form-select-sm me-2" style="width: auto;">
+                        <option value="">Bulk Action</option>
+                        <option value="pending">Mark as Pending</option>
+                        <option value="processing">Mark as Processing</option>
+                        <option value="completed">Mark as Completed</option>
+                        <option value="rejected">Mark as Rejected</option>
+                    </select>
+                    <button type="button" id="applyBulkAction" class="btn btn-sm btn-primary" disabled>Apply</button>
+                </form>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th style="width: 30px;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="selectAll">
+                                </div>
+                            </th>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Order Type</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order, user, order_type in orders %}
+                        <tr>
+                            <td>
+                                <div class="form-check">
+                                    <input class="form-check-input order-checkbox" type="checkbox" value="{{ order.id }}">
+                                </div>
+                            </td>
+                            <td>{{ order.id }}</td>
+                            <td>{{ user.username }}</td>
+                            <td>{{ order_type.name }}</td>
+                            <td>
+                                <span class="status-badge badge {% if order.status == 'pending' %}bg-warning{% elif order.status == 'processing' %}bg-primary{% elif order.status == 'completed' %}bg-success{% elif order.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                    {{ order.status|capitalize }}
+                                </span>
+                            </td>
+                            <td>{{ order.created_at.isoformat().split('T')[0] }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-info" 
+                                            onclick="viewOrder({{ order.id }}, '{{ order_type.name }}', '{{ user.username }}', '{{ order.description }}', '{{ order.field_data|tojson }}', '{{ order.status }}')">
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
+                                    
+                                    {% if order.status == 'pending' %}
+                                    <form class="d-inline" method="POST" action="{{ url_for('admin_update_order_status', order_id=order.id) }}">
+                                        <input type="hidden" name="status" value="approved">
+                                        <button type="submit" class="btn btn-sm btn-success mx-1">
+                                            <i class="fas fa-check"></i> Approve
+                                        </button>
+                                    </form>
+                                    <form class="d-inline" method="POST" action="{{ url_for('admin_update_order_status', order_id=order.id) }}">
+                                        <input type="hidden" name="status" value="rejected">
+                                        <button type="submit" class="btn btn-sm btn-danger mx-1">
+                                            <i class="fas fa-times"></i> Reject
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    
+                                    {% if order.status == 'approved' or order.status == 'processing' %}
+                                    <form class="d-inline" method="POST" action="{{ url_for('admin_update_order_status', order_id=order.id) }}">
+                                        <input type="hidden" name="status" value="completed">
+                                        <button type="submit" class="btn btn-sm btn-success mx-1">
+                                            <i class="fas fa-check-double"></i> Complete
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    
+                                    <button type="button" class="btn btn-sm btn-primary" 
+                                            onclick="updateStatus({{ order.id }})">
+                                        <i class="fas fa-edit"></i> Edit Status
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">No orders found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Order Modal -->
+<div class="modal fade" id="viewOrderModal" tabindex="-1" aria-labelledby="viewOrderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewOrderModalLabel">Order Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>Order ID:</strong> <span id="orderId"></span></p>
+                        <p><strong>Order Type:</strong> <span id="orderType"></span></p>
+                        <p><strong>User:</strong> <span id="orderUser"></span></p>
+                        <p><strong>Status:</strong> <span id="orderStatus"></span></p>
+                    </div>
+                </div>
+                
+                <h6>Description</h6>
+                <p id="orderDescription" class="mb-4"></p>
+                
+                <h6>Field Data</h6>
+                <div id="orderFields" class="mb-3">
+                    <!-- Field data will be inserted here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Status Modal -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1" aria-labelledby="updateStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateStatusModalLabel">Update Order Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="updateStatusForm" method="POST" action="">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="processing">Processing</option>
+                            <option value="completed">Completed</option>
+                            <option value="rejected">Rejected</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function viewOrder(id, type, user, description, fieldData, status) {
+        document.getElementById('orderId').textContent = id;
+        document.getElementById('orderType').textContent = type;
+        document.getElementById('orderUser').textContent = user;
+        document.getElementById('orderDescription').textContent = description || 'No description provided';
+        
+        // Set status with formatting
+        let statusText = status;
+        let statusBadge = 'secondary';
+        
+        if (status === 'pending') {
+            statusBadge = 'warning';
+            statusText = 'Pending';
+        } else if (status === 'approved') {
+            statusBadge = 'info';
+            statusText = 'Approved';
+        } else if (status === 'processing') {
+            statusBadge = 'primary';
+            statusText = 'Processing';
+        } else if (status === 'completed') {
+            statusBadge = 'success';
+            statusText = 'Completed';
+        } else if (status === 'rejected') {
+            statusBadge = 'danger';
+            statusText = 'Rejected';
+        } else if (status === 'cancelled') {
+            statusBadge = 'secondary';
+            statusText = 'Cancelled';
+        }
+        
+        document.getElementById('orderStatus').innerHTML = `<span class="badge bg-${statusBadge}">${statusText}</span>`;
+        
+        // Parse and display field data
+        const fieldsContainer = document.getElementById('orderFields');
+        fieldsContainer.innerHTML = '';
+        
+        try {
+            const fields = JSON.parse(fieldData);
+            
+            if (Object.keys(fields).length === 0) {
+                fieldsContainer.innerHTML = '<p class="text-muted">No field data available</p>';
+            } else {
+                const dl = document.createElement('dl');
+                dl.className = 'row';
+                
+                for (const [key, value] of Object.entries(fields)) {
+                    const dt = document.createElement('dt');
+                    dt.className = 'col-sm-4';
+                    dt.textContent = key;
+                    
+                    const dd = document.createElement('dd');
+                    dd.className = 'col-sm-8';
+                    dd.textContent = value;
+                    
+                    dl.appendChild(dt);
+                    dl.appendChild(dd);
+                }
+                
+                fieldsContainer.appendChild(dl);
+            }
+        } catch (e) {
+            fieldsContainer.innerHTML = '<p class="text-muted">No field data available</p>';
+        }
+        
+        const modal = new bootstrap.Modal(document.getElementById('viewOrderModal'));
+        modal.show();
+    }
+    
+    function updateStatus(id) {
+        document.getElementById('updateStatusForm').action = `{{ url_for('admin_update_order_status', order_id=0) }}`.replace('0', id);
+        const modal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
+        modal.show();
+    }
+    
+    // Bulk action handling
+    document.addEventListener('DOMContentLoaded', function() {
+        // Select all checkbox
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const orderCheckboxes = document.querySelectorAll('.order-checkbox');
+        const bulkActionSelect = document.getElementById('bulkAction');
+        const applyBulkActionBtn = document.getElementById('applyBulkAction');
+        
+        // Toggle all checkboxes
+        selectAllCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            orderCheckboxes.forEach(cb => {
+                cb.checked = isChecked;
+            });
+            
+            // Enable/disable apply button
+            updateApplyButton();
+        });
+        
+        // Individual checkbox changes
+        orderCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                // Update "select all" checkbox
+                selectAllCheckbox.checked = [...orderCheckboxes].every(cb => cb.checked);
+                selectAllCheckbox.indeterminate = !selectAllCheckbox.checked && [...orderCheckboxes].some(cb => cb.checked);
+                
+                // Enable/disable apply button
+                updateApplyButton();
+            });
+        });
+        
+        // Bulk action select change
+        bulkActionSelect.addEventListener('change', updateApplyButton);
+        
+        function updateApplyButton() {
+            const anyChecked = [...orderCheckboxes].some(cb => cb.checked);
+            const actionSelected = bulkActionSelect.value !== '';
+            
+            applyBulkActionBtn.disabled = !(anyChecked && actionSelected);
+        }
+        
+        // Apply bulk action
+        applyBulkActionBtn.addEventListener('click', function() {
+            const selectedOrderIds = [...orderCheckboxes]
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+            
+            const status = bulkActionSelect.value;
+            
+            if (selectedOrderIds.length === 0 || !status) {
+                return;
+            }
+            
+            // Confirm action
+            if (!confirm(`Are you sure you want to mark ${selectedOrderIds.length} order(s) as "${status}"?`)) {
+                return;
+            }
+            
+            // Send bulk update request
+            fetch('{{ url_for("admin_bulk_update_orders") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    order_ids: selectedOrderIds,
+                    status: status
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update UI to reflect changes
+                    selectedOrderIds.forEach(id => {
+                        const row = document.querySelector(`.order-checkbox[value="${id}"]`).closest('tr');
+                        const statusCell = row.querySelector('.status-badge');
+                        
+                        // Update badge
+                        statusCell.className = 'status-badge badge';
+                        statusCell.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                        
+                        if (status === 'pending') {
+                            statusCell.classList.add('bg-warning');
+                        } else if (status === 'processing') {
+                            statusCell.classList.add('bg-primary');
+                        } else if (status === 'completed') {
+                            statusCell.classList.add('bg-success');
+                        } else if (status === 'rejected') {
+                            statusCell.classList.add('bg-danger');
+                        } else {
+                            statusCell.classList.add('bg-secondary');
+                        }
+                    });
+                    
+                    // Show success message
+                    alert(`Successfully updated ${selectedOrderIds.length} order(s) to "${status}" status!`);
+                    
+                    // Reset checkboxes and select
+                    selectAllCheckbox.checked = false;
+                    orderCheckboxes.forEach(cb => { cb.checked = false; });
+                    bulkActionSelect.value = '';
+                    applyBulkActionBtn.disabled = true;
+                } else {
+                    alert('Error updating orders: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating orders. Please try again.');
+            });
+        });
+    });
+</script>
+{% endblock %}

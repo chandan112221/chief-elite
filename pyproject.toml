@@ -1,0 +1,20 @@
+[project]
+name = "chief-elite-bd"
+version = "1.0.0"
+description = "Chief Elite BD - Account Management System"
+dependencies = [
+    "flask",
+    "flask-login",
+    "flask-sqlalchemy", 
+    "flask-wtf",
+    "wtforms",
+    "email-validator",
+    "werkzeug",
+    "gunicorn",
+    "psycopg2-binary",
+    "sqlalchemy"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

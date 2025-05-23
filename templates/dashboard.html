@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Chief Elite BD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="fas fa-chart-line me-2"></i>Dashboard</h1>
+        <div>
+            <a href="{{ url_for('fund_request') }}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-1"></i>Add Funds
+            </a>
+        </div>
+    </div>
+
+    <!-- Admin Notice -->
+    {% if settings.admin_notice %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="fas fa-bullhorn me-2"></i><strong>Admin Notice:</strong> {{ settings.admin_notice }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- Fund Status Alert -->
+    {% if not fund_active %}
+    <div class="alert alert-warning" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i> Your funds are inactive. Please add funds to check stock items.
+    </div>
+    {% endif %}
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card border-left-primary h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">Current Balance</div>
+                            <div class="h5 mb-0 fw-bold">{{ current_user.balance|round(2) }} BDT</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-wallet fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card border-left-success h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">Checked Items</div>
+                            <div class="h5 mb-0 fw-bold">{{ checked_items|length }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card border-left-info h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-info text-uppercase mb-1">Fund Status</div>
+                            <div class="h5 mb-0 fw-bold">
+                                {% if fund_active %}
+                                <span class="text-success">Active</span>
+                                {% else %}
+                                <span class="text-danger">Inactive</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-money-bill-wave fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card border-left-warning h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-warning text-uppercase mb-1">Min. Fund Required</div>
+                            <div class="h5 mb-0 fw-bold">{{ settings.minimum_fund|round(2) }} BDT</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-hand-holding-usd fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Checked Items Summary -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-table me-1"></i>
+                    Checked Items Summary
+                </div>
+                <div class="card-body">
+                    {% if checked_items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>SL</th>
+                                    <th>Service</th>
+                                    <th>Type</th>
+                                    <th>Count</th>
+                                    <th>Rate (Avg)</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in checked_items %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ item.service_name }}</td>
+                                    <td>{{ item.type }}</td>
+                                    <td>{{ item.count }}</td>
+                                    <td>{{ item.rate|round(2) }} BDT</td>
+                                    <td>{{ item.total|round(2) }} BDT</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="5" class="text-end fw-bold">Total:</td>
+                                    <td class="fw-bold">
+                                        {{ checked_items|sum(attribute='total')|round(2) }} BDT
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle me-2"></i>You haven't checked any items yet. Go to the <a href="{{ url_for('stock') }}" class="alert-link">Stock page</a> to check items.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Fund Requests -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-money-check-alt me-1"></i>
+                    Recent Fund Requests
+                </div>
+                <div class="card-body">
+                    {% if fund_requests %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Payment Method</th>
+                                    <th>Status</th>
+                                    <th>Received</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in fund_requests %}
+                                <tr>
+                                    <td>{{ request.request_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ request.amount|round(2) }} BDT</td>
+                                    <td>{{ request.payment_method }}</td>
+                                    <td>
+                                        {% if request.status == 'pending' %}
+                                        <span class="badge bg-warning">Pending</span>
+                                        {% elif request.status == 'approved' %}
+                                        <span class="badge bg-success">Approved</span>
+                                        {% elif request.status == 'rejected' %}
+                                        <span class="badge bg-danger">Rejected</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if request.is_received %}
+                                        <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">No</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle me-2"></i>You haven't made any fund requests yet. <a href="{{ url_for('fund_request') }}" class="alert-link">Add funds</a> to get started.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Fund Transaction History -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-history me-1"></i>
+                    Fund History
+                </div>
+                <div class="card-body">
+                    {% if fund_history %}
+                    <ul class="timeline">
+                        {% for transaction in fund_history %}
+                        <li class="timeline-item mb-4">
+                            <span class="timeline-icon {% if transaction.transaction_type == 'add' %}bg-success{% else %}bg-danger{% endif %}">
+                                <i class="fas {% if transaction.transaction_type == 'add' %}fa-plus{% else %}fa-minus{% endif %}"></i>
+                            </span>
+                            <div class="timeline-content">
+                                <h6 class="fw-bold">
+                                    {% if transaction.transaction_type == 'add' %}
+                                    <span class="text-success">+{{ transaction.amount|round(2) }} BDT</span>
+                                    {% else %}
+                                    <span class="text-danger">-{{ transaction.amount|round(2) }} BDT</span>
+                                    {% endif %}
+                                </h6>
+                                <p class="mb-0">{{ transaction.description or 'Transaction' }}</p>
+                                <p class="text-muted small">
+                                    {{ transaction.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                </p>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle me-2"></i>No transaction history available.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-bolt me-1"></i>
+                    Quick Actions
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('stock') }}" class="btn btn-primary">
+                            <i class="fas fa-box me-1"></i>Browse Stock
+                        </a>
+                        <a href="{{ url_for('accounts') }}" class="btn btn-info">
+                            <i class="fas fa-user-shield me-1"></i>View My Accounts
+                        </a>
+                        <a href="{{ url_for('fund_request') }}" class="btn btn-success">
+                            <i class="fas fa-coins me-1"></i>Add Funds
+                        </a>
+                        <a href="{{ url_for('chat') }}" class="btn btn-secondary">
+                            <i class="fas fa-comments me-1"></i>Contact Support
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timeline {
+        list-style-type: none;
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .timeline:before {
+        content: ' ';
+        background: #dee2e6;
+        display: inline-block;
+        position: absolute;
+        left: 9px;
+        width: 2px;
+        height: 100%;
+        z-index: 0;
+    }
+    
+    .timeline-item {
+        position: relative;
+    }
+    
+    .timeline-icon {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        position: absolute;
+        left: -30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .timeline-icon i {
+        font-size: 10px;
+        color: white;
+    }
+    
+    .timeline-content {
+        padding-left: 10px;
+    }
+    
+    .border-left-primary {
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .border-left-success {
+        border-left: 4px solid var(--success-color);
+    }
+    
+    .border-left-info {
+        border-left: 4px solid var(--info-color);
+    }
+    
+    .border-left-warning {
+        border-left: 4px solid var(--warning-color);
+    }
+</style>
+{% endblock %}

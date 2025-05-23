@@ -1,0 +1,345 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin Dashboard - Chief Elite BD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="fas fa-tachometer-alt me-2"></i>Admin Dashboard</h1>
+        <div>
+            <a href="{{ url_for('admin_reports') }}" class="btn btn-primary">
+                <i class="fas fa-chart-bar me-1"></i>View Reports
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards Row -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Users</div>
+                            <div class="h5 mb-0 font-weight-bold">{{ total_users }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Today's Sales</div>
+                            <div class="h5 mb-0 font-weight-bold">{{ today_sales|round(2) }} BDT</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Stock Items
+                            </div>
+                            <div class="row no-gutters align-items-center">
+                                <div class="col-auto">
+                                    <div class="h5 mb-0 me-3 font-weight-bold">{{ checked_stock }}/{{ total_stock }}</div>
+                                </div>
+                                <div class="col">
+                                    <div class="progress progress-sm">
+                                        <div class="progress-bar bg-info" role="progressbar"
+                                            style="width: {{ (checked_stock / total_stock * 100) if total_stock > 0 else 0 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Pending Requests</div>
+                            <div class="h5 mb-0 font-weight-bold">{{ pending_requests }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-comments fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Row -->
+    <div class="row">
+        <!-- Monthly Sales Chart -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-area me-1"></i>
+                    Monthly Sales
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlySalesChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Stock Pie Chart -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-pie me-1"></i>
+                    Service-wise Stock
+                </div>
+                <div class="card-body">
+                    <canvas id="serviceStockChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Row -->
+    <div class="row">
+        <!-- Recent Transactions -->
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-history me-1"></i>
+                    Recent Transactions
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in recent_transactions %}
+                                <tr>
+                                    <td>{{ transaction.user.username }}</td>
+                                    <td>
+                                        {% if transaction.transaction_type == 'add' %}
+                                        <span class="badge bg-success">Add</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Deduct</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ transaction.amount|round(2) }} BDT</td>
+                                    <td>{{ transaction.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service-wise Stock Stats -->
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-box me-1"></i>
+                    Service-wise Stock Status
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Service</th>
+                                    <th>Total Items</th>
+                                    <th>Checked</th>
+                                    <th>Remaining</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for service in service_stock %}
+                                <tr>
+                                    <td>{{ service.name }}</td>
+                                    <td>{{ service.total }}</td>
+                                    <td>{{ service.checked }}</td>
+                                    <td>{{ service.total - service.checked }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Row -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-bolt me-1"></i>
+                    Quick Actions
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <a href="{{ url_for('admin_user_edit') }}" class="btn btn-primary w-100 p-3">
+                                <i class="fas fa-user-plus mb-2 fa-2x"></i>
+                                <div>Add User</div>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <a href="{{ url_for('admin_stock_item_edit') }}" class="btn btn-info w-100 p-3">
+                                <i class="fas fa-box-open mb-2 fa-2x"></i>
+                                <div>Add Stock</div>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <a href="{{ url_for('admin_price_list') }}" class="btn btn-purple w-100 p-3" style="background-color: #6f42c1; color: white;">
+                                <i class="fas fa-tags mb-2 fa-2x"></i>
+                                <div>Add Price List</div>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <a href="{{ url_for('admin_post_edit') }}" class="btn btn-success w-100 p-3">
+                                <i class="fas fa-edit mb-2 fa-2x"></i>
+                                <div>Create Post</div>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <a href="{{ url_for('admin_fund_requests') }}" class="btn btn-warning w-100 p-3">
+                                <i class="fas fa-money-check-alt mb-2 fa-2x"></i>
+                                <div>Process Funds</div>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <a href="{{ url_for('admin_settings') }}" class="btn btn-secondary w-100 p-3">
+                                <i class="fas fa-cogs mb-2 fa-2x"></i>
+                                <div>Settings</div>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <a href="{{ url_for('admin_support') }}" class="btn btn-danger w-100 p-3">
+                                <i class="fas fa-headset mb-2 fa-2x"></i>
+                                <div>Support</div>
+                            </a>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Monthly Sales Chart
+        const monthlySalesCtx = document.getElementById('monthlySalesChart').getContext('2d');
+        const monthlySalesChart = new Chart(monthlySalesCtx, {
+            type: 'line',
+            data: {
+                labels: [{% for month, amount in monthly_sales %}'{{ month }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Monthly Sales (BDT)',
+                    data: [{% for month, amount in monthly_sales %}{{ amount|round(2) }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                    borderColor: 'rgba(78, 115, 223, 1)',
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+                    pointBorderColor: 'rgba(78, 115, 223, 1)',
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: 'rgba(78, 115, 223, 1)',
+                    pointHoverBorderColor: 'rgba(78, 115, 223, 1)',
+                    pointHitRadius: 10,
+                    pointBorderWidth: 2,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value + ' BDT';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Service Stock Chart
+        const serviceStockCtx = document.getElementById('serviceStockChart').getContext('2d');
+        const serviceStockChart = new Chart(serviceStockCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [{% for service in service_stock %}'{{ service.name }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for service in service_stock %}{{ service.total }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: [
+                        '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#5a5c69',
+                        '#2e59d9', '#17a673', '#2c9faf', '#f6c23e', '#e74a3b', '#5a5c69'
+                    ],
+                    hoverBackgroundColor: [
+                        '#2e59d9', '#17a673', '#2c9faf', '#f6c23e', '#e74a3b', '#5a5c69',
+                        '#2e59d9', '#17a673', '#2c9faf', '#f6c23e', '#e74a3b', '#5a5c69'
+                    ],
+                    hoverBorderColor: "rgba(234, 236, 244, 1)",
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+    });
+</script>
+{% endblock %}

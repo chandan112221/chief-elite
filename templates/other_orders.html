@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Other Orders - Chief Elite BD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="fas fa-shopping-cart me-2"></i>Other Orders</h1>
+        <div>
+            <span class="badge bg-success p-2">Balance: {{ current_user.balance|round(2) }} BDT</span>
+        </div>
+    </div>
+
+    <!-- Admin Notice -->
+    {% if settings.admin_notice %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="fas fa-bullhorn me-2"></i><strong>Admin Notice:</strong> {{ settings.admin_notice }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Price List -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-tags me-1"></i>Price List
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Service Name</th>
+                                    <th>Rate (BDT)</th>
+                                    <th>Validity</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order_type in order_types %}
+                                <tr>
+                                    <td>{{ order_type.name }}</td>
+                                    <td>{{ order_type.rate|round(2) }} BDT</td>
+                                    <td>{{ order_type.validity or 'N/A' }}</td>
+                                    <td>{{ order_type.description or 'N/A' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Form -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-shopping-bag me-1"></i>Place Order
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('other_orders') }}" id="orderForm">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            <label for="order_type" class="form-label">Select Service</label>
+                            {{ form.order_type(class="form-control") }}
+                            {% if form.order_type.errors %}
+                                {% for error in form.order_type.errors %}
+                                    <small class="text-danger">{{ error }}</small>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div id="dynamicFields" class="mb-3">
+                            <!-- Dynamic fields will be added here based on service type -->
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Additional Information</label>
+                            {{ form.description(class="form-control", rows=3, placeholder="Provide any additional details required for your order...") }}
+                            {% if form.description.errors %}
+                                {% for error in form.description.errors %}
+                                    <small class="text-danger">{{ error }}</small>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        {{ form.field_data(id="field_data") }}
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div id="orderPrice" class="fw-bold">
+                                Total: 0.00 BDT
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-shopping-cart me-1"></i>Place Order
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Previous Orders -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-history me-1"></i>Order History
+                </div>
+                <div class="card-body">
+                    {% if previous_orders %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Service</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order, order_type in previous_orders %}
+                                <tr>
+                                    <td>{{ order_type.name }}</td>
+                                    <td>{{ order.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        {% if order.status == 'pending' %}
+                                        <span class="badge bg-warning">Pending</span>
+                                        {% elif order.status == 'processing' %}
+                                        <span class="badge bg-info">Processing</span>
+                                        {% elif order.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                        {% elif order.status == 'rejected' %}
+                                        <span class="badge bg-danger">Rejected</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>You haven't placed any orders yet.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Order type to required fields mapping
+        const orderTypes = {
+            {% for order_type in order_types %}
+            "{{ order_type.id }}": {
+                name: "{{ order_type.name }}",
+                rate: {{ order_type.rate }},
+                requiredFields: {% if order_type.required_fields %}{{ order_type.required_fields|safe }}{% else %}null{% endif %}
+            },
+            {% endfor %}
+        };
+        
+        // Update price and fields when order type changes
+        $('#order_type').on('change', function() {
+            const orderTypeId = $(this).val();
+            const orderType = orderTypes[orderTypeId];
+            
+            if (orderType) {
+                // Update price
+                $('#orderPrice').text(`Total: ${orderType.rate.toFixed(2)} BDT`);
+                
+                // Update dynamic fields
+                updateDynamicFields(orderType.requiredFields);
+            } else {
+                $('#orderPrice').text('Total: 0.00 BDT');
+                $('#dynamicFields').empty();
+            }
+        });
+        
+        // Helper function to update dynamic fields
+        function updateDynamicFields(fields) {
+            const container = $('#dynamicFields');
+            container.empty();
+            
+            if (!fields) return;
+            
+            try {
+                const fieldsList = typeof fields === 'string' ? JSON.parse(fields) : fields;
+                
+                if (Array.isArray(fieldsList)) {
+                    fieldsList.forEach((field, index) => {
+                        const fieldId = `dynamic_field_${index}`;
+                        const fieldHtml = `
+                            <div class="mb-3">
+                                <label for="${fieldId}" class="form-label">${field.label || 'Field ' + (index + 1)}</label>
+                                <input type="${field.type || 'text'}" class="form-control" 
+                                       id="${fieldId}" name="${fieldId}" 
+                                       placeholder="${field.placeholder || ''}" 
+                                       ${field.required ? 'required' : ''}>
+                                ${field.description ? `<small class="form-text text-muted">${field.description}</small>` : ''}
+                            </div>
+                        `;
+                        container.append(fieldHtml);
+                    });
+                }
+            } catch (e) {
+                console.error('Error parsing required fields:', e);
+            }
+        }
+        
+        // Submit form handler
+        $('#orderForm').on('submit', function(e) {
+            const orderTypeId = $('#order_type').val();
+            const orderType = orderTypes[orderTypeId];
+            
+            if (!orderTypeId) {
+                e.preventDefault();
+                alert('Please select a service type.');
+                return false;
+            }
+            
+            // Collect dynamic field data
+            if (orderType && orderType.requiredFields) {
+                const fieldData = {};
+                try {
+                    const fieldsList = typeof orderType.requiredFields === 'string' ? 
+                        JSON.parse(orderType.requiredFields) : orderType.requiredFields;
+                    
+                    if (Array.isArray(fieldsList)) {
+                        fieldsList.forEach((field, index) => {
+                            const fieldId = `dynamic_field_${index}`;
+                            fieldData[field.label || `field_${index}`] = $(`#${fieldId}`).val();
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error processing field data:', e);
+                }
+                
+                // Set the collected data to the hidden field
+                $('#field_data').val(JSON.stringify(fieldData));
+            }
+        });
+        
+        // Trigger change on initial load if a value is selected
+        if ($('#order_type').val()) {
+            $('#order_type').trigger('change');
+        }
+    });
+</script>
+{% endblock %}

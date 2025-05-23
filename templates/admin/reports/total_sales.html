@@ -1,0 +1,185 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ title }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Reports</li>
+    </ol>
+    
+    <div class="row">
+        <div class="col-xl-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar me-1"></i>
+                    Monthly Sales
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlySalesChart" width="100%" height="40"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-pie me-1"></i>
+                    Service-wise Sales
+                </div>
+                <div class="card-body">
+                    <canvas id="serviceSalesChart" width="100%" height="40"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-table me-1"></i>
+            Transactions
+        </div>
+        <div class="card-body">
+            <form class="row g-3 mb-4" method="GET" action="{{ url_for('admin_reports') }}">
+                <div class="col-md-3">
+                    <label for="start_date" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" value="{{ request.args.get('start_date', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="end_date" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" value="{{ request.args.get('end_date', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="transaction_type" class="form-label">Type</label>
+                    <select class="form-select" id="transaction_type" name="transaction_type">
+                        <option value="">All</option>
+                        <option value="add" {% if request.args.get('transaction_type') == 'add' %}selected{% endif %}>Add</option>
+                        <option value="deduct" {% if request.args.get('transaction_type') == 'deduct' %}selected{% endif %}>Deduct</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">Filter</button>
+                    <a href="{{ url_for('admin_reports') }}" class="btn btn-secondary">Reset</a>
+                </div>
+            </form>
+            
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>User</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction, user in transactions %}
+                    <tr>
+                        <td>{{ transaction.created_at.isoformat().replace('T', ' ').split('.')[0] }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>
+                            {% if transaction.transaction_type == 'add' %}
+                            <span class="badge bg-success">Add</span>
+                            {% else %}
+                            <span class="badge bg-danger">Deduct</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ transaction.amount }} BDT</td>
+                        <td>{{ transaction.description }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center">No transactions found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <div class="d-flex justify-content-between mt-3">
+                <div>
+                    <strong>Total:</strong> {{ total_amount }} BDT
+                </div>
+                <a href="{{ url_for('admin_generate_custom_invoice') }}?{{ request.query_string.decode() }}" class="btn btn-primary">
+                    <i class="fas fa-file-invoice me-1"></i> Generate Invoice
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Monthly Sales Chart
+    const monthlySalesData = {
+        labels: [{% for month, amount in monthly_data %}'{{ month }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Monthly Sales',
+            backgroundColor: 'rgba(0, 123, 255, 0.5)',
+            borderColor: 'rgba(0, 123, 255, 1)',
+            data: [{% for month, amount in monthly_data %}{{ amount }}{% if not loop.last %}, {% endif %}{% endfor %}],
+        }]
+    };
+    
+    const monthlySalesConfig = {
+        type: 'bar',
+        data: monthlySalesData,
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    };
+    
+    new Chart(
+        document.getElementById('monthlySalesChart'),
+        monthlySalesConfig
+    );
+    
+    // Service Sales Chart
+    const serviceSalesData = {
+        labels: [{% for service, amount in service_data %}'{{ service }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Service Sales',
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.5)',
+                'rgba(54, 162, 235, 0.5)',
+                'rgba(255, 206, 86, 0.5)',
+                'rgba(75, 192, 192, 0.5)',
+                'rgba(153, 102, 255, 0.5)',
+                'rgba(255, 159, 64, 0.5)'
+            ],
+            borderColor: [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)'
+            ],
+            data: [{% for service, amount in service_data %}{{ amount }}{% if not loop.last %}, {% endif %}{% endfor %}],
+        }]
+    };
+    
+    const serviceSalesConfig = {
+        type: 'pie',
+        data: serviceSalesData,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    };
+    
+    new Chart(
+        document.getElementById('serviceSalesChart'),
+        serviceSalesConfig
+    );
+</script>
+{% endblock %}

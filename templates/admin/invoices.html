@@ -1,0 +1,203 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ title }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Generate Invoice</li>
+    </ol>
+    
+    <div class="row">
+        <!-- Invoice Service Settings Card -->
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-cog me-1"></i>
+                    Invoice Service Settings
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">
+                        Select which service types will appear on generated invoices.
+                        Toggle the switches to include or exclude services.
+                    </p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Service Name</th>
+                                    <th style="width: 100px;" class="text-center">Include</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for service, setting in services_with_settings %}
+                                <tr>
+                                    <td>{{ service.name }}</td>
+                                    <td class="text-center">
+                                        <div class="form-check form-switch d-flex justify-content-center">
+                                            <input class="form-check-input service-toggle" 
+                                                   type="checkbox" 
+                                                   role="switch" 
+                                                   id="toggle_service_{{ service.id }}" 
+                                                   data-service-id="{{ service.id }}"
+                                                   {% if setting and setting.is_included %}checked{% endif %}>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Generate Invoice Card -->
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-file-invoice me-1"></i>
+                    Generate New Invoice
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin_generate_custom_invoice') }}" id="invoiceForm">
+                        <div class="mb-3">
+                            <label for="user_id" class="form-label">Select User <span class="text-danger">*</span></label>
+                            <select class="form-select" id="user_id" name="user_id" required>
+                                <option value="">-- Select User --</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.username }} - {{ user.email }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted mt-2">
+                                The system will automatically generate an invoice including all services 
+                                the user has purchased or checked, based on the settings configured.
+                            </small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-file-invoice me-1"></i> Generate Invoice
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Invoice Result Container -->
+    <div id="invoiceResult"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function printInvoice() {
+        const printContent = document.getElementById('invoicePreview').innerHTML;
+        const originalContent = document.body.innerHTML;
+        
+        document.body.innerHTML = printContent;
+        window.print();
+        document.body.innerHTML = originalContent;
+    }
+    
+    // Handle service toggle switches
+    document.querySelectorAll('.service-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const serviceId = this.dataset.serviceId;
+            const isChecked = this.checked;
+            
+            // Disable the toggle while processing
+            this.disabled = true;
+            
+            // Send AJAX request to update service inclusion setting
+            fetch(`{{ url_for('admin_toggle_invoice_service', service_id=0) }}`.replace('0', serviceId), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show quick feedback
+                    const row = this.closest('tr');
+                    row.style.backgroundColor = '#d4edda';
+                    setTimeout(() => {
+                        row.style.backgroundColor = '';
+                    }, 1000);
+                } else {
+                    // Revert the toggle if there was an error
+                    this.checked = !isChecked;
+                    alert('Error updating service setting');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                this.checked = !isChecked;
+                alert('Error updating service setting. Please try again.');
+            })
+            .finally(() => {
+                // Re-enable the toggle
+                this.disabled = false;
+            });
+        });
+    });
+    
+    // Handle invoice form submission with AJAX
+    document.getElementById('invoiceForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const button = this.querySelector('button[type="submit"]');
+        const originalText = button.innerHTML;
+        
+        // Show loading state
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating...';
+        button.disabled = true;
+        
+        fetch('{{ url_for("admin_generate_custom_invoice") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show invoice
+                document.getElementById('invoiceResult').innerHTML = `
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-file-invoice me-1"></i>
+                                Generated Invoice
+                            </div>
+                            <button onclick="printInvoice()" class="btn btn-sm btn-primary">
+                                <i class="fas fa-print me-1"></i> Print Invoice
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="invoice-preview" id="invoicePreview">
+                                ${data.invoice_html}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Scroll to invoice result
+                document.getElementById('invoiceResult').scrollIntoView({ behavior: 'smooth' });
+            } else {
+                alert('Error generating invoice: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error generating invoice. Please try again.');
+        })
+        .finally(() => {
+            // Reset button
+            button.innerHTML = originalText;
+            button.disabled = false;
+        });
+    });
+</script>
+{% endblock %}

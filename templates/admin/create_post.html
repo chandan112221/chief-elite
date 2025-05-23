@@ -1,0 +1,172 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Create New Post - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="fas fa-plus-circle text-success me-2"></i>Create New Post</h1>
+        <div>
+            <a href="{{ url_for('admin_posts') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-list me-1"></i>View All Posts
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-pen me-2"></i>Post Details</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin_create_post') }}" enctype="multipart/form-data" id="createPostForm">
+
+                        
+                        <div class="mb-4">
+                            <label for="title" class="form-label fs-5">Post Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-lg" id="title" name="title" required placeholder="Enter an engaging title for your post">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="content" class="form-label fs-5">Post Content <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="content" name="content" rows="6" required placeholder="Write your post content here... Share updates, announcements, or any information for your users."></textarea>
+                            <div class="form-text">Write engaging content that your users will find valuable and interesting.</div>
+                        </div>
+                        
+                        <!-- Media Upload Section -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-images me-2"></i>Add Media (Optional)</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="photo_url" class="form-label">Photo URL</label>
+                                        <input type="url" class="form-control" id="photo_url" name="photo_url" placeholder="https://example.com/image.jpg">
+                                        <div class="form-text">Enter a direct link to an image</div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="photo_file" class="form-label">Upload Photo</label>
+                                        <input type="file" class="form-control" id="photo_file" name="photo_file" accept="image/*">
+                                        <div class="form-text">JPG, PNG, JPEG, GIF files allowed</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="video_url" class="form-label">Video URL</label>
+                                        <input type="url" class="form-control" id="video_url" name="video_url" placeholder="https://youtube.com/watch?v=...">
+                                        <div class="form-text">YouTube, Vimeo, or direct video link</div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="video_file" class="form-label">Upload Video</label>
+                                        <input type="file" class="form-control" id="video_file" name="video_file" accept="video/*">
+                                        <div class="form-text">MP4, MOV, AVI files allowed</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <button type="button" class="btn btn-outline-info" onclick="togglePreview()">
+                                    <i class="fas fa-eye me-1"></i>Preview Post
+                                </button>
+                            </div>
+                            <div>
+                                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary me-2">Cancel</a>
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-paper-plane me-1"></i>Publish Post
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Live Preview Column -->
+        <div class="col-lg-4">
+            <div class="card sticky-top" style="top: 1rem;">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-eye me-2"></i>Live Preview</h6>
+                </div>
+                <div class="card-body" id="livePreviewContainer">
+                    <div id="previewContent">
+                        <h5 id="previewTitle" class="text-muted">Your title will appear here</h5>
+                        <p id="previewText" class="text-muted">Your content will appear here...</p>
+                        <div id="previewMedia"></div>
+                    </div>
+                    <small class="text-muted">Preview updates as you type</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.sticky-top {
+    position: sticky !important;
+}
+#previewContent {
+    min-height: 200px;
+}
+.form-control:focus {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function togglePreview() {
+        updatePreview();
+    }
+    
+    function updatePreview() {
+        const title = document.getElementById('title').value || 'Your title will appear here';
+        const content = document.getElementById('content').value || 'Your content will appear here...';
+        const photoUrl = document.getElementById('photo_url').value;
+        const videoUrl = document.getElementById('video_url').value;
+        
+        document.getElementById('previewTitle').textContent = title;
+        document.getElementById('previewTitle').className = title !== 'Your title will appear here' ? 'text-dark' : 'text-muted';
+        
+        document.getElementById('previewText').textContent = content;
+        document.getElementById('previewText').className = content !== 'Your content will appear here...' ? 'text-dark' : 'text-muted';
+        
+        let mediaHtml = '';
+        if (photoUrl) {
+            mediaHtml += `<img src="${photoUrl}" class="img-fluid rounded mt-2" style="max-height: 200px;" alt="Preview image" onerror="this.style.display='none'">`;
+        }
+        if (videoUrl) {
+            if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+                const videoId = videoUrl.includes('youtu.be') ? 
+                    videoUrl.split('/').pop().split('?')[0] : 
+                    videoUrl.split('v=')[1]?.split('&')[0];
+                if (videoId) {
+                    mediaHtml += `<iframe width="100%" height="200" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen class="mt-2 rounded"></iframe>`;
+                }
+            } else {
+                mediaHtml += `<video controls class="img-fluid mt-2 rounded" style="max-height: 200px; width: 100%;"><source src="${videoUrl}" type="video/mp4"></video>`;
+            }
+        }
+        document.getElementById('previewMedia').innerHTML = mediaHtml;
+    }
+    
+    // Auto-update preview as user types
+    document.getElementById('title').addEventListener('input', updatePreview);
+    document.getElementById('content').addEventListener('input', updatePreview);
+    document.getElementById('photo_url').addEventListener('input', updatePreview);
+    document.getElementById('video_url').addEventListener('input', updatePreview);
+    
+    // Initialize preview on page load
+    document.addEventListener('DOMContentLoaded', updatePreview);
+</script>
+{% endblock %}

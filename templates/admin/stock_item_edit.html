@@ -1,0 +1,137 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ title }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_stock') }}">Stock Management</a></li>
+        <li class="breadcrumb-item active">{{ title }}</li>
+    </ol>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-edit me-1"></i>
+            {{ 'Edit' if item else 'Add' }} Stock Item
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin_stock_item_edit', item_id=item.id if item else None) }}">
+                {{ form.hidden_tag() }}
+                
+                <div class="mb-3">
+                    <label for="service_id" class="form-label">Service</label>
+                    {{ form.service_id(class="form-select", id="service_id") }}
+                    {% if form.service_id.errors %}
+                        <div class="text-danger">
+                            {% for error in form.service_id.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name (optional)</label>
+                    {{ form.name(class="form-control", id="name") }}
+                    {% if form.name.errors %}
+                        <div class="text-danger">
+                            {% for error in form.name.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="mail" class="form-label">Email/Username</label>
+                    {{ form.mail(class="form-control", id="mail") }}
+                    {% if form.mail.errors %}
+                        <div class="text-danger">
+                            {% for error in form.mail.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    {{ form.password(class="form-control", id="password") }}
+                    {% if form.password.errors %}
+                        <div class="text-danger">
+                            {% for error in form.password.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="profile_link" class="form-label">Profile Link (optional)</label>
+                    {{ form.profile_link(class="form-control", id="profile_link") }}
+                    {% if form.profile_link.errors %}
+                        <div class="text-danger">
+                            {% for error in form.profile_link.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="recovery_mail" class="form-label">Recovery Email (optional)</label>
+                    {{ form.recovery_mail(class="form-control", id="recovery_mail") }}
+                    {% if form.recovery_mail.errors %}
+                        <div class="text-danger">
+                            {% for error in form.recovery_mail.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="two_factor" class="form-label">2FA (optional)</label>
+                    {{ form.two_factor(class="form-control", id="two_factor") }}
+                    {% if form.two_factor.errors %}
+                        <div class="text-danger">
+                            {% for error in form.two_factor.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="rate" class="form-label">Rate</label>
+                    {{ form.rate(class="form-control", id="rate", type="number", step="0.01") }}
+                    {% if form.rate.errors %}
+                        <div class="text-danger">
+                            {% for error in form.rate.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3 form-check">
+                    {{ form.is_old(class="form-check-input", id="is_old") }}
+                    <label class="form-check-label" for="is_old">Is Old Account</label>
+                    {% if form.is_old.errors %}
+                        <div class="text-danger">
+                            {% for error in form.is_old.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('admin_stock') }}" class="btn btn-secondary">Cancel</a>
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

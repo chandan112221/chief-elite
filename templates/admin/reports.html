@@ -1,0 +1,52 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ title }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Reports</li>
+    </ol>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-line me-1"></i>
+                    Sales Reports
+                </div>
+                <div class="card-body">
+                    <p>View sales statistics and transaction history.</p>
+                    <a href="{{ url_for('admin_reports') }}" class="btn btn-primary">View Report</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-users me-1"></i>
+                    User Activity
+                </div>
+                <div class="card-body">
+                    <p>View user login history and account activity.</p>
+                    <a href="#" class="btn btn-primary">View Report</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-box-open me-1"></i>
+                    Stock Reports
+                </div>
+                <div class="card-body">
+                    <p>View stock usage statistics and trends.</p>
+                    <a href="#" class="btn btn-primary">View Report</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

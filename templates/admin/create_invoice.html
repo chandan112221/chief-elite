@@ -1,0 +1,510 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Create Invoice - Chief Elite BD{% endblock %}
+
+{% block extra_css %}
+<style>
+    .services-list, .orders-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .service-item, .order-item {
+        border-bottom: 1px solid #eee;
+        padding: 8px 0;
+    }
+    .service-item:last-child, .order-item:last-child {
+        border-bottom: none;
+    }
+    .invoice-preview {
+        background: white;
+        padding: 30px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        height: 100%;
+        overflow-y: auto;
+    }
+    .hidden {
+        display: none;
+    }
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        #invoiceHTML, #invoiceHTML * {
+            visibility: visible;
+        }
+        #invoiceHTML {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="fas fa-file-invoice me-2"></i>Create Invoice</h1>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-user me-1"></i>Select User
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="user_select" class="form-label">Select User</label>
+                        <select class="form-select" id="user_select">
+                            <option value="">-- Select a User --</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.username }} {% if user.full_name %}({{ user.full_name }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="user_details" class="hidden">
+                        <div class="alert alert-info">
+                            <div class="mb-2"><strong>Username:</strong> <span id="user_username"></span></div>
+                            <div class="mb-2"><strong>Full Name:</strong> <span id="user_fullname"></span></div>
+                            <div class="mb-2"><strong>Email:</strong> <span id="user_email"></span></div>
+                            <div class="mb-2"><strong>Phone:</strong> <span id="user_phone"></span></div>
+                            <div class="mb-2"><strong>Address:</strong> <span id="user_address"></span></div>
+                            <div><strong>Balance:</strong> <span id="user_balance"></span> BDT</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4" id="services_card" style="display: none;">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-list me-1"></i>Active Services
+                </div>
+                <div class="card-body">
+                    <div id="services_container" class="services-list">
+                        <div class="text-center py-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading services...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4" id="orders_card" style="display: none;">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-shopping-cart me-1"></i>Other Orders
+                </div>
+                <div class="card-body">
+                    <div id="orders_container" class="orders-list">
+                        <div class="text-center py-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading orders...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4" id="company_info_card" style="display: none;">
+                <div class="card-header bg-warning text-dark">
+                    <i class="fas fa-building me-1"></i>Company Information
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="company_name" class="form-label">Company Name</label>
+                        <input type="text" class="form-control" id="company_name" value="Chief Elite Bd">
+                    </div>
+                    <div class="mb-3">
+                        <label for="company_phone" class="form-label">Phone</label>
+                        <input type="text" class="form-control" id="company_phone" value="01856659780">
+                    </div>
+                    <div class="mb-3">
+                        <label for="company_address" class="form-label">Address</label>
+                        <input type="text" class="form-control" id="company_address" value="Khulna">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4" id="generate_card" style="display: none;">
+                <div class="card-body">
+                    <button id="generate_btn" class="btn btn-primary w-100">
+                        <i class="fas fa-file-invoice me-1"></i>Generate Invoice
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card mb-4" id="preview_card" style="display: none;">
+                <div class="card-header bg-dark text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div><i class="fas fa-file-invoice me-1"></i>Invoice Preview</div>
+                        <div>
+                            <button id="print_btn" class="btn btn-light btn-sm me-2">
+                                <i class="fas fa-print me-1"></i>Print
+                            </button>
+                            <button id="download_pdf_btn" class="btn btn-primary btn-sm">
+                                <i class="fas fa-download me-1"></i>Download PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0 bg-light">
+                    <div id="invoiceHTML" class="invoice-preview"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const userSelect = document.getElementById('user_select');
+    const userDetails = document.getElementById('user_details');
+    const servicesCard = document.getElementById('services_card');
+    const ordersCard = document.getElementById('orders_card');
+    const companyInfoCard = document.getElementById('company_info_card');
+    const generateCard = document.getElementById('generate_card');
+    const previewCard = document.getElementById('preview_card');
+    const generateBtn = document.getElementById('generate_btn');
+    const printBtn = document.getElementById('print_btn');
+    const downloadPdfBtn = document.getElementById('download_pdf_btn');
+    const invoiceHTML = document.getElementById('invoiceHTML');
+    
+    // User selection data
+    let selectedUserId = null;
+    let userServices = [];
+    let userOrders = [];
+    let selectedServices = [];
+    let selectedOrders = [];
+    
+    // Handle user selection
+    userSelect.addEventListener('change', function() {
+        selectedUserId = this.value;
+        
+        if (!selectedUserId) {
+            resetInterface();
+            return;
+        }
+        
+        // Show loading state
+        userDetails.classList.add('hidden');
+        servicesCard.style.display = 'none';
+        ordersCard.style.display = 'none';
+        companyInfoCard.style.display = 'none';
+        generateCard.style.display = 'none';
+        previewCard.style.display = 'none';
+        
+        // Get user info
+        fetch(`/admin/user/info/${selectedUserId}`, {
+            method: 'GET',
+            credentials: 'same-origin'
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    displayUserInfo(data.user);
+                    fetchUserServices();
+                    fetchUserOrders();
+                    
+                    // Show related cards
+                    userDetails.classList.remove('hidden');
+                    servicesCard.style.display = 'block';
+                    ordersCard.style.display = 'block';
+                    companyInfoCard.style.display = 'block';
+                    generateCard.style.display = 'block';
+                } else {
+                    throw new Error(data.error || 'Unknown error occurred');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching user info:', error);
+                alert('Error loading user information. Please try again.');
+            });
+    });
+    
+    // Display user information
+    function displayUserInfo(user) {
+        document.getElementById('user_username').textContent = user.username || 'N/A';
+        document.getElementById('user_fullname').textContent = user.full_name || 'N/A';
+        document.getElementById('user_email').textContent = user.email || 'N/A';
+        document.getElementById('user_phone').textContent = user.phone_number || 'N/A';
+        document.getElementById('user_address').textContent = user.address || 'N/A';
+        document.getElementById('user_balance').textContent = user.balance || '0.00';
+    }
+    
+    // Fetch user's active services
+    function fetchUserServices() {
+        const servicesContainer = document.getElementById('services_container');
+        
+        fetch(`/admin/user/services/${selectedUserId}`, {
+            method: 'GET',
+            credentials: 'same-origin'
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                userServices = data.services || [];
+                
+                if (userServices.length === 0) {
+                    servicesContainer.innerHTML = '<p class="text-center py-3">No active services found for this user.</p>';
+                    return;
+                }
+                
+                let html = '';
+                userServices.forEach(service => {
+                    html += `
+                        <div class="service-item">
+                            <div class="form-check">
+                                <input class="form-check-input service-checkbox" type="checkbox" 
+                                    value="${service.service_id}" 
+                                    data-name="${service.service_name}"
+                                    data-count="${service.count}"
+                                    data-rate="${service.rate}"
+                                    data-total="${service.total}"
+                                    id="service_${service.service_id}">
+                                <label class="form-check-label" for="service_${service.service_id}">
+                                    <span class="fw-bold">${service.service_name}</span>
+                                    <div class="small text-muted">
+                                        ${service.count} items × ${service.rate} BDT = ${service.total} BDT
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                servicesContainer.innerHTML = html;
+                
+                // Add event listeners
+                document.querySelectorAll('.service-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', updateSelectedServices);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching services:', error);
+                servicesContainer.innerHTML = '<p class="text-center text-danger py-3">Error loading services. Please try again.</p>';
+            });
+    }
+    
+    // Fetch user's orders
+    function fetchUserOrders() {
+        const ordersContainer = document.getElementById('orders_container');
+        
+        fetch(`/admin/user/orders/${selectedUserId}`, {
+            method: 'GET',
+            credentials: 'same-origin'
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                userOrders = data.orders || [];
+                
+                if (userOrders.length === 0) {
+                    ordersContainer.innerHTML = '<p class="text-center py-3">No active orders found for this user.</p>';
+                    return;
+                }
+                
+                let html = '';
+                userOrders.forEach(order => {
+                    html += `
+                        <div class="order-item">
+                            <div class="form-check">
+                                <input class="form-check-input order-checkbox" type="checkbox" 
+                                    value="${order.id}" 
+                                    data-name="${order.type_name}"
+                                    data-rate="${order.rate}"
+                                    id="order_${order.id}">
+                                <label class="form-check-label" for="order_${order.id}">
+                                    <span class="fw-bold">${order.type_name}</span>
+                                    <div class="small text-muted">
+                                        Status: ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                        <br>Rate: ${order.rate} BDT
+                                        <br>Date: ${order.created_at || 'N/A'}
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                ordersContainer.innerHTML = html;
+                
+                // Add event listeners
+                document.querySelectorAll('.order-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', updateSelectedOrders);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching orders:', error);
+                ordersContainer.innerHTML = '<p class="text-center text-danger py-3">Error loading orders. Please try again.</p>';
+            });
+    }
+    
+    // Update selected services
+    function updateSelectedServices() {
+        selectedServices = [];
+        document.querySelectorAll('.service-checkbox:checked').forEach(checkbox => {
+            selectedServices.push({
+                id: checkbox.value,
+                name: checkbox.dataset.name,
+                count: parseInt(checkbox.dataset.count),
+                rate: parseFloat(checkbox.dataset.rate),
+                total: parseFloat(checkbox.dataset.total)
+            });
+        });
+    }
+    
+    // Update selected orders
+    function updateSelectedOrders() {
+        selectedOrders = [];
+        document.querySelectorAll('.order-checkbox:checked').forEach(checkbox => {
+            selectedOrders.push({
+                id: checkbox.value,
+                name: checkbox.dataset.name,
+                rate: parseFloat(checkbox.dataset.rate)
+            });
+        });
+    }
+    
+    // Generate invoice
+    generateBtn.addEventListener('click', function() {
+        if (!selectedUserId) {
+            alert('Please select a user first.');
+            return;
+        }
+        
+        if (selectedServices.length === 0 && selectedOrders.length === 0) {
+            alert('Please select at least one service or order to include in the invoice.');
+            return;
+        }
+        
+        const invoiceData = {
+            user_id: selectedUserId,
+            company_name: document.getElementById('company_name').value,
+            company_phone: document.getElementById('company_phone').value,
+            company_address: document.getElementById('company_address').value,
+            selected_services: selectedServices,
+            selected_orders: selectedOrders
+        };
+        
+        // Show loading state
+        invoiceHTML.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3">Generating invoice...</p>
+            </div>
+        `;
+        previewCard.style.display = 'block';
+        
+        fetch('/admin/invoice/generate-custom', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(invoiceData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                invoiceHTML.innerHTML = data.invoice_html;
+            } else {
+                throw new Error(data.error || 'Unknown error occurred');
+            }
+        })
+        .catch(error => {
+            console.error('Error generating invoice:', error);
+            invoiceHTML.innerHTML = `
+                <div class="alert alert-danger m-3">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Error generating invoice: ${error.message || 'Please try again later.'}
+                </div>
+            `;
+        });
+    });
+    
+    // Print invoice
+    printBtn.addEventListener('click', function() {
+        window.print();
+    });
+    
+    // Download PDF
+    downloadPdfBtn.addEventListener('click', function() {
+        const { jsPDF } = window.jspdf;
+        
+        // Show loading state
+        const originalContent = invoiceHTML.innerHTML;
+        invoiceHTML.innerHTML += `
+            <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" 
+                 style="background: rgba(255,255,255,0.8); z-index: 9999;">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3">Generating PDF...</p>
+                </div>
+            </div>
+        `;
+        
+        const invoiceElement = invoiceHTML.querySelector('.invoice-container');
+        
+        html2canvas(invoiceElement, {
+            scale: 2,
+            useCORS: true,
+            logging: false
+        }).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`Chief_Elite_Invoice_${Date.now()}.pdf`);
+            
+            // Restore original content
+            invoiceHTML.innerHTML = originalContent;
+        }).catch(error => {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF. Please try again.');
+            invoiceHTML.innerHTML = originalContent;
+        });
+    });
+    
+    // Reset interface
+    function resetInterface() {
+        userDetails.classList.add('hidden');
+        servicesCard.style.display = 'none';
+        ordersCard.style.display = 'none';
+        companyInfoCard.style.display = 'none';
+        generateCard.style.display = 'none';
+        previewCard.style.display = 'none';
+        
+        selectedServices = [];
+        selectedOrders = [];
+    }
+});
+</script>
+{% endblock %}

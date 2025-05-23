@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} - Chief Elite BD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="fas fa-newspaper me-2"></i>Post Details</h1>
+        <div>
+            <a href="{{ url_for('posts') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Posts
+            </a>
+        </div>
+    </div>
+
+    <div class="card post-card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-user-shield me-2"></i>{{ post.admin.username }}
+                <small class="text-muted ms-2">{{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+            </div>
+            {% if post.created_at != post.updated_at %}
+            <div>
+                <small class="text-muted">Edited: {{ post.updated_at.strftime('%Y-%m-%d %H:%M') }}</small>
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <h4 class="card-title">{{ post.title }}</h4>
+            <div class="card-text mb-4">{{ post.content|safe }}</div>
+            
+            {% if post.photo_url %}
+            <div class="text-center mb-3">
+                <img src="{{ post.photo_url }}" class="img-fluid post-img" alt="Post image">
+            </div>
+            {% endif %}
+            
+            {% if post.video_url %}
+            <div class="ratio ratio-16x9 mb-3">
+                <iframe src="{{ post.video_url }}" title="Video" allowfullscreen></iframe>
+            </div>
+            {% endif %}
+            
+            <div class="post-actions">
+                <button class="btn-like" data-post-id="{{ post.id }}" data-liked="{{ 'true' if has_liked else 'false' }}">
+                    <i class="fas fa-heart {{ 'text-danger' if has_liked else '' }}"></i>
+                    <span class="like-count">{{ post.likes|length }}</span> Likes
+                </button>
+                <button class="btn-comment">
+                    <i class="fas fa-comment"></i>
+                    <span>{{ comments|length }}</span> Comments
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comments Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-comments me-1"></i>Comments
+        </div>
+        <div class="card-body">
+            <!-- New Comment Form -->
+            <form method="POST" action="{{ url_for('post_detail', post_id=post.id) }}">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ form.content(class="form-control", rows=3, placeholder="Write a comment...") }}
+                    {% if form.content.errors %}
+                        {% for error in form.content.errors %}
+                            <small class="text-danger">{{ error }}</small>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                <div class="text-end">
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+
+            <hr class="my-4">
+
+            <!-- Comments List -->
+            {% if comments %}
+                {% for comment in comments %}
+                <div class="comment">
+                    <div class="comment-header">
+                        <span class="comment-username">{{ comment.user.username }}</span>
+                        <span class="comment-date">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                    </div>
+                    <div class="comment-content">
+                        {{ comment.content }}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>No comments yet. Be the first to comment!
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Like functionality
+        $('.btn-like').on('click', function() {
+            const postId = $(this).data('post-id');
+            const likeButton = $(this);
+            const likeIcon = likeButton.find('i');
+            const likeCount = likeButton.find('.like-count');
+            
+            $.ajax({
+                url: `/post/${postId}/like`,
+                method: 'POST',
+                contentType: 'application/json',
+                success: function(response) {
+                    if (response.action === 'liked') {
+                        likeIcon.addClass('text-danger');
+                        likeCount.text(response.count);
+                        likeButton.data('liked', 'true');
+                    } else {
+                        likeIcon.removeClass('text-danger');
+                        likeCount.text(response.count);
+                        likeButton.data('liked', 'false');
+                    }
+                },
+                error: function() {
+                    alert('Error processing your like. Please try again.');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

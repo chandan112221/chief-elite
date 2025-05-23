@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}My Accounts - Chief Elite BD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="fas fa-user-shield me-2"></i>My Accounts</h1>
+        <div>
+            <a href="{{ url_for('stock') }}" class="btn btn-primary">
+                <i class="fas fa-box me-1"></i>Check Stock
+            </a>
+        </div>
+    </div>
+
+    <!-- Service Categories Tabs -->
+    <ul class="nav nav-tabs service-tabs mb-4">
+        {% for category in categories %}
+        <li class="nav-item">
+            <a class="nav-link {% if active_category == category.name.lower() %}active{% endif %}" 
+               href="{{ url_for('accounts', category=category.name.lower()) }}">
+                <i class="fas {% if category.name.lower() == 'facebook' %}fa-facebook{% elif category.name.lower() == 'gmail' %}fa-envelope{% elif category.name.lower() == 'linkedin' %}fa-linkedin{% elif category.name.lower() == 'webmail' %}fa-globe{% elif category.name.lower() == 'edu mail' %}fa-graduation-cap{% elif category.name.lower() == 'outlook' %}fa-envelope-open{% else %}fa-box{% endif %} me-2"></i>
+                {{ category.name }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <!-- Account Items Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-list me-1"></i>
+                <span id="serviceTitle">My Checked Items</span>
+            </div>
+            <div>
+                <input type="text" id="tableSearch" class="form-control form-control-sm" placeholder="Search accounts...">
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="accountItemsTable">
+                    <thead>
+                        <tr id="tableHeaders">
+                            <!-- Will be populated dynamically -->
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Will be populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="loadingIndicator" class="text-center my-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading your accounts...</p>
+            </div>
+            <div id="noItemsMessage" class="alert alert-info text-center my-4" style="display: none;">
+                <i class="fas fa-info-circle me-2"></i>You haven't checked any items for this service. Go to the <a href="{{ url_for('stock') }}" class="alert-link">Stock page</a> to check items.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Account Details Modal -->
+<div class="modal fade" id="accountDetailsModal" tabindex="-1" aria-labelledby="accountDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="accountDetailsModalLabel">Account Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="accountDetailsBody">
+                <!-- Will be populated dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="copyAllButton">
+                    <i class="fas fa-copy me-1"></i>Copy All Details
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        const activeCategory = '{{ active_category }}';
+        
+        // Initial load of checked items
+        loadCheckedItems(activeCategory);
+        
+        // Search functionality
+        $('#tableSearch').on('keyup', function() {
+            const value = $(this).val().toLowerCase();
+            $("#tableBody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+        
+        // Copy all details button
+        $('#copyAllButton').on('click', function() {
+            const detailsText = $('#accountDetailsBody').text().trim();
+            navigator.clipboard.writeText(detailsText).then(() => {
+                alert('All details copied to clipboard!');
+            });
+        });
+    });
+    
+    function loadCheckedItems(serviceName) {
+        // Show loading indicator
+        $('#loadingIndicator').show();
+        $('#noItemsMessage').hide();
+        $('#tableBody').empty();
+        $('#tableHeaders').empty();
+        
+        // Fetch checked items
+        $.ajax({
+            url: `/accounts/${serviceName}`,
+            method: 'GET',
+            success: function(response) {
+                $('#loadingIndicator').hide();
+                
+                const items = response.items;
+                if (items.length === 0) {
+                    $('#noItemsMessage').show();
+                    return;
+                }
+                
+                // Set service title
+                $('#serviceTitle').text(`${response.category} Accounts`);
+                
+                // Create table headers based on the category
+                let headers = ['SL', 'Service', 'Name', 'Email', 'Password', 'Profile Link', 'Created Date', 'Checked Date', 'Action'];
+                
+                if (serviceName.toLowerCase() === 'gmail' || serviceName.toLowerCase() === 'outlook') {
+                    headers = ['SL', 'Service', 'Email', 'Password', 'Recovery Email', 'Created Date', 'Checked Date', 'Action'];
+                } else if (serviceName.toLowerCase() === 'webmail' || serviceName.toLowerCase() === 'edu mail') {
+                    headers = ['SL', 'Service', 'Email', 'Password', 'Created Date', 'Checked Date', 'Action'];
+                }
+                
+                // Create table headers
+                const headerRow = $('#tableHeaders');
+                headers.forEach(header => {
+                    headerRow.append(`<th>${header}</th>`);
+                });
+                
+                // Add items to table
+                const tableBody = $('#tableBody');
+                items.forEach(item => {
+                    let row = `<tr>
+                        <td>${item.sl}</td>
+                        <td>${item.service_name || '-'}</td>`;
+                    
+                    if (serviceName.toLowerCase() !== 'gmail' && serviceName.toLowerCase() !== 'outlook' && 
+                        serviceName.toLowerCase() !== 'webmail' && serviceName.toLowerCase() !== 'edu mail') {
+                        row += `<td>${item.name || '-'}</td>`;
+                    }
+                    
+                    row += `<td>${item.mail || '-'}</td>
+                        <td>${item.pass || '-'}</td>`;
+                    
+                    if (serviceName.toLowerCase() === 'gmail' || serviceName.toLowerCase() === 'outlook') {
+                        row += `<td>${item.recovery_mail || '-'}</td>`;
+                    } else if (serviceName.toLowerCase() !== 'webmail' && serviceName.toLowerCase() !== 'edu mail') {
+                        row += `<td><a href="${item.profile_link || '#'}" target="_blank">${item.profile_link ? 'View Profile' : '-'}</a></td>`;
+                    }
+                    
+                    row += `<td>${item.created_date || '-'}</td>
+                        <td>${item.checked_date || '-'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info view-details" data-item='${JSON.stringify(item)}'>
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>`;
+                    
+                    tableBody.append(row);
+                });
+                
+                // Add click handler for view details button
+                $('.view-details').on('click', function() {
+                    const item = $(this).data('item');
+                    showAccountDetails(item, serviceName);
+                });
+            },
+            error: function(xhr) {
+                $('#loadingIndicator').hide();
+                $('#noItemsMessage').show().text('Error loading accounts: ' + (xhr.responseJSON?.error || 'Unknown error'));
+            }
+        });
+    }
+    
+    function showAccountDetails(item, serviceName) {
+        // Set modal title
+        $('#accountDetailsModalLabel').text(`${serviceName} Account Details`);
+        
+        // Create details HTML
+        let detailsHtml = `
+        <div class="container">
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>All account details are shown below. Click the copy button next to each field to copy its value.
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add appropriate fields based on service
+        if (serviceName.toLowerCase() !== 'gmail' && serviceName.toLowerCase() !== 'outlook' && 
+            serviceName.toLowerCase() !== 'webmail' && serviceName.toLowerCase() !== 'edu mail') {
+            detailsHtml += createDetailRow('Name', item.name);
+        }
+        
+        detailsHtml += createDetailRow('Email', item.mail);
+        detailsHtml += createDetailRow('Password', item.pass);
+        
+        if (serviceName.toLowerCase() === 'gmail' || serviceName.toLowerCase() === 'outlook') {
+            detailsHtml += createDetailRow('Recovery Email', item.recovery_mail);
+        }
+        
+        if (serviceName.toLowerCase() !== 'webmail' && serviceName.toLowerCase() !== 'edu mail' && 
+            serviceName.toLowerCase() !== 'gmail' && serviceName.toLowerCase() !== 'outlook') {
+            detailsHtml += createDetailRow('Profile Link', item.profile_link, true);
+        }
+        
+        if (item.two_factor) {
+            detailsHtml += createDetailRow('2FA', item.two_factor);
+        }
+        
+        detailsHtml += createDetailRow('Created Date', item.created_date);
+        detailsHtml += createDetailRow('Checked Date', item.checked_date);
+        detailsHtml += createDetailRow('Rate', `${item.rate} BDT`);
+        
+        detailsHtml += `
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Keep your account details private and secure. Do not share with others.
+                    </div>
+                </div>
+            </div>
+        </div>`;
+        
+        // Set modal body content
+        $('#accountDetailsBody').html(detailsHtml);
+        
+        // Initialize copy buttons
+        $('.copy-btn').on('click', function() {
+            const textToCopy = $(this).data('copy');
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                $(this).html('<i class="fas fa-check me-1"></i>Copied!');
+                setTimeout(() => {
+                    $(this).html('<i class="fas fa-copy me-1"></i>Copy');
+                }, 2000);
+            });
+        });
+        
+        // Show the modal
+        $('#accountDetailsModal').modal('show');
+    }
+    
+    function createDetailRow(label, value, isLink = false) {
+        if (!value) value = '-';
+        
+        let valueHtml = value;
+        if (isLink && value !== '-') {
+            valueHtml = `<a href="${value}" target="_blank">${value}</a>`;
+        }
+        
+        return `
+        <div class="row mb-3">
+            <div class="col-md-3 fw-bold">${label}:</div>
+            <div class="col-md-7">${valueHtml}</div>
+            <div class="col-md-2 text-end">
+                <button class="btn btn-sm btn-outline-primary copy-btn" data-copy="${value !== '-' ? value : ''}">
+                    <i class="fas fa-copy me-1"></i>Copy
+                </button>
+            </div>
+        </div>
+        `;
+    }
+</script>
+{% endblock %}

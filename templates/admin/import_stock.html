@@ -1,0 +1,61 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Import Stock Items</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_stock') }}">Stock Management</a></li>
+        <li class="breadcrumb-item active">Import Stock</li>
+    </ol>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-file-import me-1"></i>
+            Bulk Import Stock Items
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin_import_stock') }}">
+                <div class="mb-3">
+                    <label for="service_id" class="form-label">Service</label>
+                    <select class="form-select" id="service_id" name="service_id" required>
+                        <option value="">Select a service</option>
+                        {% for service in services %}
+                        <option value="{{ service.id }}">{{ service.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="is_old" name="is_old" value="true">
+                    <label class="form-check-label" for="is_old">Old Accounts</label>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="items_text" class="form-label">Items Data</label>
+                    <textarea class="form-control" id="items_text" name="items_text" rows="10" required></textarea>
+                    <div id="itemsHelp" class="form-text">
+                        <p>Enter one item per line, with comma-separated values.</p>
+                        
+                        <p><strong>Format:</strong></p>
+                        <ul>
+                            <li>For Facebook/LinkedIn: name, mail, password, profile_link, [2fa]</li>
+                            <li>For Gmail/Webmail: mail, password, recovery_mail, [2fa]</li>
+                            <li>For other types: mail/username, password, [additional info]</li>
+                        </ul>
+                        
+                        <p><strong>Example:</strong></p>
+                        <pre>John Doe, john@example.com, Password123, https://facebook.com/johndoe
+Jane Smith, jane@example.com, Secret789, https://facebook.com/janesmith, 123456</pre>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('admin_stock') }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Import Items</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

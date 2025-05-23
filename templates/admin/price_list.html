@@ -1,0 +1,203 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Price List Update - Chief Elite BD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="fas fa-tags me-2"></i>Price List Update</h1>
+        <div>
+            <button type="button" class="btn btn-primary btn-lg me-2" data-bs-toggle="modal" data-bs-target="#addPriceModal">
+                <i class="fas fa-plus me-2"></i>Add New Price List
+            </button>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addPriceModal">
+                <i class="fas fa-edit me-1"></i>Update Price
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Add Section -->
+    <div class="card mb-4 bg-light">
+        <div class="card-body">
+            <h5><i class="fas fa-lightning-bolt me-2"></i>Quick Add Price List</h5>
+            <p class="text-muted">এখানে সহজে নতুন service এর price add করুন</p>
+            <button type="button" class="btn btn-warning btn-lg" data-bs-toggle="modal" data-bs-target="#addPriceModal">
+                <i class="fas fa-plus-circle me-2"></i>নতুন Price List যোগ করুন
+            </button>
+        </div>
+    </div>
+
+    <!-- Price List Table -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-list me-1"></i>Current Price List
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="priceListTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Service</th>
+                            <th>Type</th>
+                            <th>Rate (BDT)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for price in prices %}
+                        <tr>
+                            <td>{{ price.id }}</td>
+                            <td>{{ price.service }}</td>
+                            <td>{{ price.type }}</td>
+                            <td>{{ price.rate|round(2) }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-info edit-price-btn" 
+                                            data-id="{{ price.id }}"
+                                            data-service="{{ price.service }}"
+                                            data-type="{{ price.type }}"
+                                            data-rate="{{ price.rate }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger delete-price-btn"
+                                            data-id="{{ price.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center">No price items available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Price Modal -->
+<div class="modal fade" id="addPriceModal" tabindex="-1" aria-labelledby="addPriceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addPriceModalLabel">Add Price Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('admin_price_add') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="serviceInput" class="form-label">Service</label>
+                        <input type="text" class="form-control" id="serviceInput" name="service" required>
+                        <small class="form-text text-muted">Enter the service name (e.g., Facebook, Gmail, etc.)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="typeInput" class="form-label">Type</label>
+                        <input type="text" class="form-control" id="typeInput" name="type" required>
+                        <small class="form-text text-muted">Enter the service type (e.g., New, Old, etc.)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="rateInput" class="form-label">Rate (BDT)</label>
+                        <input type="number" step="0.01" class="form-control" id="rateInput" name="rate" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Price</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Price Modal -->
+<div class="modal fade" id="editPriceModal" tabindex="-1" aria-labelledby="editPriceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editPriceModalLabel">Edit Price Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('admin_price_edit') }}" method="POST">
+                <input type="hidden" id="editPriceId" name="price_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editServiceInput" class="form-label">Service</label>
+                        <input type="text" class="form-control" id="editServiceInput" name="service" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editTypeInput" class="form-label">Type</label>
+                        <input type="text" class="form-control" id="editTypeInput" name="type" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editRateInput" class="form-label">Rate (BDT)</label>
+                        <input type="number" step="0.01" class="form-control" id="editRateInput" name="rate" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Price Confirmation Modal -->
+<div class="modal fade" id="deletePriceModal" tabindex="-1" aria-labelledby="deletePriceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deletePriceModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this price item? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deletePriceForm" action="{{ url_for('admin_price_delete') }}" method="POST">
+                    <input type="hidden" id="deletePriceId" name="price_id">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Initialize buttons for Add Price
+        $('#addPriceModal').on('shown.bs.modal', function () {
+            $('#serviceInput').focus();
+        });
+        
+        // Edit price button handler
+        $('.edit-price-btn').on('click', function() {
+            const id = $(this).data('id');
+            const service = $(this).data('service');
+            const type = $(this).data('type');
+            const rate = $(this).data('rate');
+            
+            $('#editPriceId').val(id);
+            $('#editServiceInput').val(service);
+            $('#editTypeInput').val(type);
+            $('#editRateInput').val(rate);
+            
+            $('#editPriceModal').modal('show');
+        });
+        
+        // Delete price button handler
+        $('.delete-price-btn').on('click', function() {
+            const id = $(this).data('id');
+            $('#deletePriceId').val(id);
+            $('#deletePriceModal').modal('show');
+        });
+    });
+</script>
+{% endblock %}

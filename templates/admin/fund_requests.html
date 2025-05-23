@@ -1,0 +1,97 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ title }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Fund Requests</li>
+    </ol>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-list me-1"></i>
+            Fund Requests
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Amount</th>
+                            <th>Payment Method</th>
+                            <th>Transaction ID</th>
+                            <th>Status</th>
+                            <th>Received</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for request, user in requests %}
+                        <tr>
+                            <td>{{ request.id }}</td>
+                            <td>{{ user.username }}</td>
+                            <td>{{ request.amount }} BDT</td>
+                            <td>{{ request.payment_method }}</td>
+                            <td>{{ request.transaction_id }}</td>
+                            <td>
+                                {% if request.status == 'pending' %}
+                                <span class="badge bg-warning">Pending</span>
+                                {% elif request.status == 'approved' %}
+                                <span class="badge bg-success">Approved</span>
+                                {% elif request.status == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if request.is_received %}
+                                <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                <span class="badge bg-danger">No</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ request.request_date.isoformat().split('T')[0] }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    {% if request.status == 'pending' %}
+                                    <form class="d-inline me-1" method="POST" action="{{ url_for('admin_quick_approve_fund', request_id=request.id) }}">
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="fas fa-check"></i> Approve
+                                        </button>
+                                    </form>
+                                    <form class="d-inline me-1" method="POST" action="{{ url_for('admin_quick_reject_fund', request_id=request.id) }}">
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-times"></i> Reject
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    
+                                    <a href="{{ url_for('admin_process_fund', request_id=request.id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-edit"></i> Process
+                                    </a>
+                                    
+                                    {% if not request.is_received and request.status == 'approved' %}
+                                    <form class="d-inline ms-1" method="POST" action="{{ url_for('admin_mark_fund_received', request_id=request.id) }}">
+                                        <button type="submit" class="btn btn-sm btn-info">
+                                            <i class="fas fa-check-double"></i> Mark Received
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center">No fund requests found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

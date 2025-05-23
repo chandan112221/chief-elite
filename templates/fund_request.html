@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Add Funds - Chief Elite BD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="fas fa-coins me-2"></i>Add Funds</h1>
+        <div>
+            <span class="badge bg-success p-2">Current Balance: {{ current_user.balance|round(2) }} BDT</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-money-bill-wave me-1"></i>Request Fund
+                </div>
+                <div class="card-body">
+                    <!-- Payment Instructions -->
+                    <div class="alert alert-info mb-4" role="alert">
+                        <h5 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Payment Instructions</h5>
+                        <p>Follow these steps to add funds to your account:</p>
+                        <ol>
+                            <li>Send money to <strong>{{ settings.contact_phone }}</strong> using your preferred payment method.</li>
+                            <li>Fill out the form below with the transaction details.</li>
+                            <li>Wait for admin approval (usually within 24 hours).</li>
+                            <li>Once approved, the funds will be added to your account.</li>
+                        </ol>
+                        <hr>
+                        <p class="mb-0">Minimum fund amount: <strong>{{ settings.minimum_fund|round(2) }} BDT</strong></p>
+                    </div>
+
+                    <!-- Fund Request Form -->
+                    <form method="POST" action="{{ url_for('fund_request') }}">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Amount (BDT)</label>
+                            {{ form.amount(class="form-control", min=settings.minimum_fund) }}
+                            {% if form.amount.errors %}
+                                {% for error in form.amount.errors %}
+                                    <small class="text-danger">{{ error }}</small>
+                                {% endfor %}
+                            {% endif %}
+                            <small class="form-text text-muted">Minimum amount: {{ settings.minimum_fund|round(2) }} BDT</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="payment_method" class="form-label">Payment Method</label>
+                            {{ form.payment_method(class="form-control") }}
+                            {% if form.payment_method.errors %}
+                                {% for error in form.payment_method.errors %}
+                                    <small class="text-danger">{{ error }}</small>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="transaction_id" class="form-label">Transaction ID</label>
+                            {{ form.transaction_id(class="form-control", placeholder="Enter the TrxID/Reference Number") }}
+                            {% if form.transaction_id.errors %}
+                                {% for error in form.transaction_id.errors %}
+                                    <small class="text-danger">{{ error }}</small>
+                                {% endfor %}
+                            {% endif %}
+                            <small class="form-text text-muted">Enter the transaction ID you received after making the payment.</small>
+                        </div>
+                        
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-1"></i>Submit Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Payment Methods -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-credit-card me-1"></i>Payment Methods
+                </div>
+                <div class="card-body">
+                    <div class="payment-method mb-3">
+                        <h5 class="d-flex align-items-center">
+                            <i class="fas fa-mobile-alt me-2 text-danger"></i>bKash
+                        </h5>
+                        <p class="mb-0">Number: {{ settings.contact_phone }}</p>
+                        <small class="text-muted">Send money using bKash mobile banking</small>
+                    </div>
+                    
+                    <div class="payment-method mb-3">
+                        <h5 class="d-flex align-items-center">
+                            <i class="fas fa-mobile-alt me-2 text-warning"></i>Nagad
+                        </h5>
+                        <p class="mb-0">Number: {{ settings.contact_phone }}</p>
+                        <small class="text-muted">Send money using Nagad mobile banking</small>
+                    </div>
+                    
+                    <div class="payment-method">
+                        <h5 class="d-flex align-items-center">
+                            <i class="fas fa-mobile-alt me-2 text-primary"></i>Rocket
+                        </h5>
+                        <p class="mb-0">Number: {{ settings.contact_phone }}</p>
+                        <small class="text-muted">Send money using Rocket mobile banking</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Previous Requests -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-history me-1"></i>Previous Requests
+                </div>
+                <div class="card-body">
+                    {% if previous_requests %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in previous_requests %}
+                                <tr>
+                                    <td>{{ request.request_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ request.amount|round(2) }} BDT</td>
+                                    <td>
+                                        {% if request.status == 'pending' %}
+                                        <span class="badge bg-warning">Pending</span>
+                                        {% elif request.status == 'approved' %}
+                                        <span class="badge bg-success">Approved</span>
+                                        {% elif request.status == 'rejected' %}
+                                        <span class="badge bg-danger">Rejected</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle me-2"></i>No previous fund requests.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

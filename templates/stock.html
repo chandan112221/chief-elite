@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Stock - Chief Elite BD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="fas fa-box me-2"></i>Stock</h1>
+        <div>
+            <span id="stockBalance" class="badge bg-success p-2 me-2">Balance: {{ current_user.balance|round(2) }} BDT</span>
+        </div>
+    </div>
+
+    <!-- Admin Notice -->
+    {% if settings.admin_notice %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="fas fa-bullhorn me-2"></i><strong>Admin Notice:</strong> {{ settings.admin_notice }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- Fund Status Alert -->
+    {% if not can_check %}
+    <div class="alert alert-warning" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i> 
+        {% if current_user.balance < settings.minimum_fund %}
+        Your balance ({{ current_user.balance|round(2) }} BDT) is below the minimum required ({{ settings.minimum_fund|round(2) }} BDT).
+        {% else %}
+        Your funds are inactive. Please add funds to check stock items.
+        {% endif %}
+        <a href="{{ url_for('fund_request') }}" class="alert-link">Add funds</a> to unlock checking functionality.
+    </div>
+    {% endif %}
+
+    <!-- Service Categories Tabs -->
+    <ul class="nav nav-tabs service-tabs mb-4">
+        {% for category in categories %}
+        <li class="nav-item">
+            <a class="nav-link {% if active_category == category.name.lower() %}active{% endif %}" 
+               href="{{ url_for('stock', category=category.name.lower()) }}">
+                <i class="fas {% if category.name.lower() == 'social media' or category.name.lower() == 'social midea' %}fa-users{% elif category.name.lower() == 'email' %}fa-envelope{% else %}fa-box{% endif %} me-2"></i>
+                {{ category.name }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    
+    <!-- Service Selection (only show when a category is selected) -->
+    {% if active_services %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-list me-1"></i>Services
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for service in active_services %}
+                <div class="col-md-3 mb-3">
+                    <button class="btn btn-outline-primary service-btn w-100" 
+                            data-service="{{ service.name }}" 
+                            onclick="loadServiceData('{{ service.name }}')">
+                        <i class="fas {% if service.name.lower() == 'facebook' %}fa-facebook{% elif service.name.lower() == 'gmail' %}fa-envelope{% elif service.name.lower() == 'linkedin' %}fa-linkedin{% elif service.name.lower() == 'webmail' %}fa-globe{% elif service.name.lower() == 'edu mail' %}fa-graduation-cap{% elif service.name.lower() == 'outlook' %}fa-envelope-open{% else %}fa-box{% endif %} me-1"></i>
+                        {{ service.name }}
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Service Content -->
+    <div class="tab-content">
+        <div class="tab-pane active">
+            <!-- Stock Type Buttons -->
+            <div class="mb-3" id="stockTypeButtons">
+                <!-- Will be populated dynamically -->
+            </div>
+
+            <!-- Price List -->
+            <div class="card mb-4" id="priceListCard">
+                <div class="card-header">
+                    <i class="fas fa-tags me-1"></i>Price List
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="priceListTable">
+                            <thead>
+                                <tr>
+                                    <th>Service</th>
+                                    <th>Type</th>
+                                    <th>Rate (BDT)</th>
+                                    <th>Validity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Will be populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock Items Table -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-list me-1"></i>
+                        <span id="serviceTitle">Stock Items</span>
+                    </div>
+                    <div>
+                        <input type="text" id="tableSearch" class="form-control form-control-sm" placeholder="Search items...">
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="stockItemsTable">
+                            <thead>
+                                <tr id="tableHeaders">
+                                    <!-- Will be populated dynamically -->
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <!-- Will be populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="loadingIndicator" class="text-center my-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading stock items...</p>
+                    </div>
+                    <div id="noItemsMessage" class="alert alert-info text-center my-4" style="display: none;">
+                        <i class="fas fa-info-circle me-2"></i>No items available for this service.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Item Details Modal -->
+<div class="modal fade" id="itemDetailsModal" tabindex="-1" aria-labelledby="itemDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="itemDetailsModalLabel">Item Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="itemDetailsBody">
+                <!-- Will be populated dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/stock.js') }}"></script>
+<script>
+    // Initialize stock page with the active category
+    $(document).ready(function() {
+        const activeCategory = '{{ active_category }}';
+        const canCheck = {{ can_check|tojson }};
+        const userType = '{{ "mail_user" if current_user.is_mail_user() else "pass_user" if current_user.is_pass_user() else "regular" }}';
+        initializeStockPage(activeCategory, canCheck, userType);
+        
+        // For debugging
+        console.log('Stock page initialized with category:', activeCategory);
+        console.log('Can check:', canCheck);
+        console.log('User type:', userType);
+    });
+</script>
+{% endblock %}
